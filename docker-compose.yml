@@ -5,7 +5,7 @@ services:
     ports: 
       - "4000:27017"
     restart: "always"
-
+    command: --quiet
   azure-storage:
     image: azure-storage
     build: 
