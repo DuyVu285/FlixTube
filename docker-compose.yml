@@ -6,6 +6,15 @@ services:
       - "4000:27017"
     restart: "always"
     command: mongod --quiet --logpath /dev/null
+
+  rabbit:
+    image: rabbitmq
+    container_name: rabbit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    restart: "always"
+
   #azure-storage:
   #  image: azure-storage
   #  build:
@@ -53,7 +62,12 @@ services:
       - "4002:80"
     environment:
       - PORT=80
+      - RABBIT=amqp://guest:guest@rabbit:5672
       - DB_HOST=mongodb://db:27017
       - DB_NAME=history
       - NODE_ENV=development
+    depends_on:
+      - db
+      - rabbit
     restart: "no"
+
