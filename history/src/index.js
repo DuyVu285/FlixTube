@@ -41,37 +41,32 @@ function connectRabbit() {
 function setUpHandlers(app, db, messageChannel) {
 
     const videosCollection = db.collection("videos");
-    console.log("Connected to database.");
-    app.post("/viewed", (req, res) => {
-        const videoPath = req.body.videoPath;
-        videosCollection.insertOne({ videoPath: videoPath })
-            .then(() => {
-                console.log(`Added video ${videoPath} to history.`);
-                res.sendStatus(200);
-            })
-            .catch(err => {
-                console.error(`Error adding video ${videoPath} to history.`);
-                console.error(err && err.stack || err);
-                res.sendStatus(500);
-            });
-    });
 
-    app.get("/history", (req, res) => {
-        const skip = parseInt(req.query.skip);
-        const limit = parseInt(req.query.limit);
-        videosCollection.find()
-            .skip(skip)
-            .limit(limit)
-            .toArray()
-            .then(documents => {
-                res.json({ history: documents });
-            })
-            .catch(err => {
-                console.error(`Error retrieving history from database.`);
-                console.error(err && err.stack || err);
-                res.sendStatus(500);
+    function consumeViewedMessage(msg) {
+        console.log("Received a 'viewed' message");
+
+        const parsedMsg = JSON.parse(msg.content.toString());
+
+        return videosCollection.insertOne({ videoPath: parsedMsg.videoPath })
+            .then(() => {
+                console.log("Acknowledging message was handled.");
+
+                messageChannel.ack(msg);
             });
-    });
+    };
+
+    return messageChannel.assertExchange("viewed", "fanout")
+        .then(() => {
+            return messageChannel.assertQueue("", { exclusive: true });
+        })
+        .then(response => {
+            const queueName = response.queue;
+            console.log(`Created queue ${queueName}, binding it to "viewed" exchange.`);
+            return messageChannel.bindQueue(queueName, "viewed", "")
+                .then(() => {
+                    return messageChannel.consume(queueName, consumeViewedMessage);
+                });
+        });
 }
 
 function startHttpServer(db, messageChannel) {
