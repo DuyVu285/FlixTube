@@ -23,7 +23,7 @@ function main() {
 }
 
 main()
-    .then(() => { console.log("Microservice online."); })
+    .then(() => { console.log("Microservice starts."); })
     .catch(err => {
         console.error("Microservice failed to start.");
         console.error(err && err.stack || err);
